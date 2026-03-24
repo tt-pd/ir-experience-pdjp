@@ -262,6 +262,8 @@
             let timerInterval = null;
             let timeoutShown = false;
             let history = []; // 選択履歴
+            let cumulativeLoss = 0;      // 累積損失額（円）
+            let cumulativeMinutes = 0;   // 累積経過分（ゲーム内）
 
             // ─────────────────────────────────────
             // ゲーム開始
@@ -269,6 +271,8 @@
             function startGame() {
                 history = [];
                 timeoutShown = false;
+                cumulativeLoss = 0;
+                cumulativeMinutes = 0;
                 startTime = Date.now();
 
                 show("screen-game");
@@ -421,12 +425,33 @@
           <span class="font-bold mr-2">${labelMap[choice.quality]}</span>
           ${choice.note}
         </div>
-        <div class="mt-2 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-400 flex items-center justify-between">
-          <span>${scene.gameMinutes}分経過</span>
-          <span class="font-bold text-red-400">− ${formatJPY(scene.gameMinutes * 60 * REVENUE_PER_SECOND)}</span>
+        <div class="mt-2 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
+          <span class="text-gray-500">障害発生から <span id="anim-minutes" class="text-gray-300 font-bold">${cumulativeMinutes}分</span> 経過</span>
+          <span class="font-bold text-red-400" id="anim-loss">− ${formatJPY(cumulativeLoss)}</span>
         </div>
       `;
                 sceneEl.querySelector("#choices").after(feedbackEl);
+
+                // 累積を加算してアニメーション
+                const prevLoss = cumulativeLoss;
+                const prevMinutes = cumulativeMinutes;
+                const addLoss = scene.gameMinutes * 60 * REVENUE_PER_SECOND;
+                const addMinutes = scene.gameMinutes;
+                cumulativeLoss += addLoss;
+                cumulativeMinutes += addMinutes;
+
+                animateCounter(
+                    document.getElementById("anim-loss"),
+                    prevLoss,
+                    cumulativeLoss,
+                    (v) => `− ${formatJPY(v)}`
+                );
+                animateCounter(
+                    document.getElementById("anim-minutes"),
+                    prevMinutes,
+                    cumulativeMinutes,
+                    (v) => `${v}分`
+                );
 
                 // 「次へ」ボタン
                 setTimeout(() => {
@@ -489,18 +514,26 @@
 
             function animateLoss(target) {
                 const el = document.getElementById("loss-counter");
-                const duration = 2000; // 2秒かけてカウントアップ
+                const duration = 2000;
                 const start = Date.now();
-
                 function step() {
-                    const progress = Math.min(
-                        (Date.now() - start) / duration,
-                        1,
-                    );
-                    // easeOut
+                    const progress = Math.min((Date.now() - start) / duration, 1);
                     const eased = 1 - Math.pow(1 - progress, 3);
                     const current = Math.round(target * eased);
                     el.textContent = formatJPY(current);
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            }
+
+            // from → to をアニメしてフォーマッタで表示する汎用カウンター
+            function animateCounter(el, from, to, formatter, duration = 800) {
+                const start = Date.now();
+                function step() {
+                    const progress = Math.min((Date.now() - start) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    const current = Math.round(from + (to - from) * eased);
+                    el.textContent = formatter(current);
                     if (progress < 1) requestAnimationFrame(step);
                 }
                 requestAnimationFrame(step);
