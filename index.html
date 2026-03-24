@@ -116,7 +116,7 @@
                 <div
                     class="mb-2 text-xs text-red-400 tracking-widest uppercase font-mono"
                 >
-                    CS ロールプレイ
+                    インシデント対応 CS ロールプレイ体験
                 </div>
                 <h1 class="text-3xl font-bold text-white mb-2">
                     深夜の決済障害
@@ -262,8 +262,8 @@
             let timerInterval = null;
             let timeoutShown = false;
             let history = []; // 選択履歴
-            let cumulativeLoss = 0;      // 累積損失額（円）
-            let cumulativeMinutes = 0;   // 累積経過分（ゲーム内）
+            let cumulativeLoss = 0; // 累積損失額（円）
+            let cumulativeMinutes = 0; // 累積経過分（ゲーム内）
 
             // ─────────────────────────────────────
             // ゲーム開始
@@ -435,8 +435,8 @@
                 // 累積を加算してアニメーション
                 const prevLoss = cumulativeLoss;
                 const prevMinutes = cumulativeMinutes;
-                const addLoss = scene.gameMinutes * 60 * REVENUE_PER_SECOND;
-                const addMinutes = scene.gameMinutes;
+                const addLoss = choice.minutes * 60 * REVENUE_PER_SECOND;
+                const addMinutes = choice.minutes;
                 cumulativeLoss += addLoss;
                 cumulativeMinutes += addMinutes;
 
@@ -444,13 +444,13 @@
                     document.getElementById("anim-loss"),
                     prevLoss,
                     cumulativeLoss,
-                    (v) => `− ${formatJPY(v)}`
+                    (v) => `− ${formatJPY(v)}`,
                 );
                 animateCounter(
                     document.getElementById("anim-minutes"),
                     prevMinutes,
                     cumulativeMinutes,
-                    (v) => `${v}分`
+                    (v) => `${v}分`,
                 );
 
                 // 「次へ」ボタン
@@ -517,7 +517,10 @@
                 const duration = 2000;
                 const start = Date.now();
                 function step() {
-                    const progress = Math.min((Date.now() - start) / duration, 1);
+                    const progress = Math.min(
+                        (Date.now() - start) / duration,
+                        1,
+                    );
                     const eased = 1 - Math.pow(1 - progress, 3);
                     const current = Math.round(target * eased);
                     el.textContent = formatJPY(current);
@@ -530,7 +533,10 @@
             function animateCounter(el, from, to, formatter, duration = 800) {
                 const start = Date.now();
                 function step() {
-                    const progress = Math.min((Date.now() - start) / duration, 1);
+                    const progress = Math.min(
+                        (Date.now() - start) / duration,
+                        1,
+                    );
                     const eased = 1 - Math.pow(1 - progress, 3);
                     const current = Math.round(from + (to - from) * eased);
                     el.textContent = formatter(current);
