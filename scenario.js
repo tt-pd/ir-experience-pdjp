@@ -24,7 +24,7 @@ const SCENARIO = {
       gameMinutes: 32, // このシーンの経過（次シーンとの差分）
       phase: "Scene 1 / 5",
       title: "アラート受信",
-      situation: `深夜23時15分。\n\nSlackの #alerts チャンネルに見慣れないメッセージが流れてきた。\n\n「【WARNING】ECサイト 決済エラー率 42% 上昇 / 過去5分間」\n\nチャンネルには誰も反応していない。あなたは今夜のCS当番だ。`,
+      situation: `深夜23時15分。\n\nSlackの #alerts チャンネルに見慣れないメッセージが流れてきた。\n\n「【WARNING】決済サービス 決済エラー率 42% 上昇 / 過去5分間」\n\nチャンネルには誰も反応していない。あなたは今夜のCS当番だ。`,
       choices: [
         {
           label: "オンコールエンジニアのDMに状況を送る",
