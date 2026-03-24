@@ -422,7 +422,7 @@
           ${choice.note}
         </div>
         <div class="mt-2 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-400 flex items-center justify-between">
-          <span>このシーン中の推定損失</span>
+          <span>このシーン中の推定損失 <span class="text-gray-600">（ゲーム内 ${scene.gameMinutes}分経過）</span></span>
           <span class="font-bold text-red-400">${formatJPY(scene.gameMinutes * 60 * REVENUE_PER_SECOND)}</span>
         </div>
       `;
