@@ -1,251 +1,345 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>深夜の決済障害 | インシデント体験</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            mono: ['"Noto Sans Mono"', 'monospace'],
-          }
-        }
-      }
-    }
-  </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet" />
-  <style>
-    body { font-family: 'Noto Sans JP', sans-serif; }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>深夜の決済障害 | CS ロールプレイ</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            mono: ['"Noto Sans Mono"', "monospace"],
+                        },
+                    },
+                },
+            };
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            body {
+                font-family: "Noto Sans JP", sans-serif;
+            }
 
-    .choice-btn {
-      transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
-    }
-    .choice-btn:hover {
-      transform: translateX(4px);
-    }
-    .choice-btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-      transform: none;
-    }
+            .choice-btn {
+                transition:
+                    background-color 0.15s,
+                    border-color 0.15s,
+                    transform 0.1s;
+            }
+            .choice-btn:hover {
+                transform: translateX(4px);
+            }
+            .choice-btn:disabled {
+                cursor: not-allowed;
+                opacity: 0.5;
+                transform: none;
+            }
 
-    .fade-in {
-      animation: fadeIn 0.4s ease-in;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+            .fade-in {
+                animation: fadeIn 0.4s ease-in;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
 
-    .blink {
-      animation: blink 1s step-start infinite;
-    }
-    @keyframes blink {
-      50% { opacity: 0; }
-    }
+            .blink {
+                animation: blink 1s step-start infinite;
+            }
+            @keyframes blink {
+                50% {
+                    opacity: 0;
+                }
+            }
 
-    #loss-counter {
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0.05em;
-    }
+            #loss-counter {
+                font-variant-numeric: tabular-nums;
+                letter-spacing: 0.05em;
+            }
 
-    .afterwork-item {
-      animation: fadeIn 0.5s ease-in both;
-    }
+            .afterwork-item {
+                animation: fadeIn 0.5s ease-in both;
+            }
 
-    .progress-bar {
-      transition: width 1s linear;
-    }
+            .progress-bar {
+                transition: width 1s linear;
+            }
 
-    #timeout-banner {
-      animation: slideDown 0.4s ease-out;
-    }
-    @keyframes slideDown {
-      from { transform: translateY(-100%); opacity: 0; }
-      to   { transform: translateY(0); opacity: 1; }
-    }
-  </style>
-</head>
-<body class="bg-gray-950 text-gray-100 min-h-screen">
+            #timeout-banner {
+                animation: slideDown 0.4s ease-out;
+            }
+            @keyframes slideDown {
+                from {
+                    transform: translateY(-100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+        </style>
+    </head>
+    <body class="bg-gray-950 text-gray-100 min-h-screen">
+        <!-- タイムアウトバナー -->
+        <div
+            id="timeout-banner"
+            class="hidden fixed top-0 left-0 right-0 z-50 bg-yellow-600 text-yellow-950 px-4 py-3 text-center font-bold shadow-lg"
+        >
+            ⚠️ 10分が経過しました。実際のインシデントはまだ続いています。
+            <button
+                onclick="dismissBanner()"
+                class="ml-4 underline text-sm font-normal"
+            >
+                続ける
+            </button>
+        </div>
 
-  <!-- タイムアウトバナー -->
-  <div id="timeout-banner" class="hidden fixed top-0 left-0 right-0 z-50 bg-yellow-600 text-yellow-950 px-4 py-3 text-center font-bold shadow-lg">
-    ⚠️ 10分が経過しました。実際のインシデントはまだ続いています。
-    <button onclick="dismissBanner()" class="ml-4 underline text-sm font-normal">続ける</button>
-  </div>
+        <!-- スタート画面 -->
+        <div
+            id="screen-start"
+            class="flex flex-col items-center justify-center min-h-screen px-6 fade-in"
+        >
+            <div class="max-w-xl w-full">
+                <div
+                    class="mb-2 text-xs text-red-400 tracking-widest uppercase font-mono"
+                >
+                    CS ロールプレイ
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">
+                    深夜の決済障害
+                </h1>
+                <p class="text-gray-400 mb-8 text-sm leading-relaxed">
+                    あなたは、年商1000億円のECサイトを運用する会社のCS担当者です。<br />
+                    今夜はオンコール当番です。
+                </p>
 
-  <!-- スタート画面 -->
-  <div id="screen-start" class="flex flex-col items-center justify-center min-h-screen px-6 fade-in">
-    <div class="max-w-xl w-full">
-      <div class="mb-2 text-xs text-red-400 tracking-widest uppercase font-mono">Incident Simulation</div>
-      <h1 class="text-3xl font-bold text-white mb-2">深夜の決済障害</h1>
-      <p class="text-gray-400 mb-8 text-sm leading-relaxed">
-        あなたは、年商1000億円のWebサービスを運営するメガベンチャーのCS担当者です。<br />
-        今夜はオンコール当番です。
-      </p>
+                <div
+                    class="bg-gray-900 border border-gray-700 rounded-lg p-5 mb-8 text-sm text-gray-300 space-y-2"
+                >
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">想定プレイ時間</span
+                        ><span>10分以内</span>
+                    </div>
+                </div>
 
-      <div class="bg-gray-900 border border-gray-700 rounded-lg p-5 mb-8 text-sm text-gray-300 space-y-2">
-        <div class="flex justify-between"><span class="text-gray-500">想定プレイ時間</span><span>10分以内</span></div>
-      </div>
+                <button
+                    id="btn-start"
+                    onclick="startGame()"
+                    class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-6 rounded-lg text-lg transition-colors"
+                >
+                    開始する
+                </button>
+            </div>
+        </div>
 
-      <button id="btn-start" onclick="startGame()"
-        class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-6 rounded-lg text-lg transition-colors">
-        開始する
-      </button>
-    </div>
-  </div>
+        <!-- ゲーム画面 -->
+        <div id="screen-game" class="hidden min-h-screen flex flex-col">
+            <!-- ヘッダー: タイマー -->
+            <div
+                class="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center gap-6 sticky top-0 z-10"
+            >
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 text-xs">実経過</span>
+                    <span
+                        id="real-timer"
+                        class="font-mono text-white text-lg font-bold"
+                        >00:00</span
+                    >
+                </div>
+                <div
+                    class="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden"
+                >
+                    <div
+                        id="timer-bar"
+                        class="progress-bar h-full bg-red-600 rounded-full"
+                        style="width: 0%"
+                    ></div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 text-xs">ゲーム内</span>
+                    <span
+                        id="game-time-display"
+                        class="font-mono text-yellow-400 text-sm"
+                        >23:15</span
+                    >
+                </div>
+            </div>
 
-  <!-- ゲーム画面 -->
-  <div id="screen-game" class="hidden min-h-screen flex flex-col">
+            <!-- メインコンテンツ -->
+            <div
+                class="flex-1 flex flex-col items-center justify-start py-8 px-4"
+            >
+                <div id="scene-container" class="max-w-2xl w-full">
+                    <!-- シーンがここに描画される -->
+                </div>
+            </div>
+        </div>
 
-    <!-- ヘッダー: タイマー -->
-    <div class="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center gap-6 sticky top-0 z-10">
-      <div class="flex items-center gap-2">
-        <span class="text-gray-500 text-xs">実経過</span>
-        <span id="real-timer" class="font-mono text-white text-lg font-bold">00:00</span>
-      </div>
-      <div class="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-        <div id="timer-bar" class="progress-bar h-full bg-red-600 rounded-full" style="width: 0%"></div>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="text-gray-500 text-xs">ゲーム内</span>
-        <span id="game-time-display" class="font-mono text-yellow-400 text-sm">23:15</span>
-      </div>
-    </div>
+        <!-- エンディング画面 -->
+        <div
+            id="screen-ending"
+            class="hidden flex flex-col items-center justify-center min-h-screen px-6"
+        >
+            <div class="max-w-xl w-full fade-in">
+                <!-- 収束メッセージ -->
+                <div class="mb-8">
+                    <div
+                        class="text-xs text-gray-500 tracking-widest uppercase font-mono mb-2"
+                    >
+                        04:12
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-4">復旧完了</h2>
+                    <p
+                        class="text-gray-400 text-sm leading-relaxed whitespace-pre-line"
+                        id="ending-message"
+                    ></p>
+                </div>
 
-    <!-- メインコンテンツ -->
-    <div class="flex-1 flex flex-col items-center justify-start py-8 px-4">
-      <div id="scene-container" class="max-w-2xl w-full">
-        <!-- シーンがここに描画される -->
-      </div>
-    </div>
-  </div>
+                <!-- 損失額 -->
+                <div
+                    class="bg-gray-900 border border-red-900 rounded-lg p-6 mb-8 text-center"
+                >
+                    <div class="text-xs text-gray-500 mb-2">
+                        この障害による推定損失額
+                    </div>
+                    <div
+                        id="loss-counter"
+                        class="text-4xl font-bold text-red-400 mb-1"
+                    >
+                        ¥0
+                    </div>
+                    <div class="text-xs text-gray-600">
+                        年商1000億円 ÷ 31,536,000秒 × 障害継続時間（ゲーム内
+                        約5時間）
+                    </div>
+                </div>
 
-  <!-- エンディング画面 -->
-  <div id="screen-ending" class="hidden flex flex-col items-center justify-center min-h-screen px-6">
-    <div class="max-w-xl w-full fade-in">
+                <!-- 後処理リスト -->
+                <div class="mb-8">
+                    <div class="text-sm text-gray-500 mb-4">
+                        障害が直った後に待ち受けていること：
+                    </div>
+                    <div id="afterwork-list" class="space-y-3"></div>
+                </div>
 
-      <!-- 収束メッセージ -->
-      <div class="mb-8">
-        <div class="text-xs text-gray-500 tracking-widest uppercase font-mono mb-2">04:12</div>
-        <h2 class="text-2xl font-bold text-white mb-4">復旧完了</h2>
-        <p class="text-gray-400 text-sm leading-relaxed whitespace-pre-line" id="ending-message"></p>
-      </div>
+                <button
+                    onclick="resetGame()"
+                    class="w-full border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 font-bold py-3 px-6 rounded-lg text-sm transition-colors"
+                >
+                    最初からやり直す
+                </button>
+            </div>
+        </div>
 
-      <!-- 損失額 -->
-      <div class="bg-gray-900 border border-red-900 rounded-lg p-6 mb-8 text-center">
-        <div class="text-xs text-gray-500 mb-2">この障害による推定損失額</div>
-        <div id="loss-counter" class="text-4xl font-bold text-red-400 mb-1">¥0</div>
-        <div class="text-xs text-gray-600">年商1000億円 ÷ 31,536,000秒 × 障害継続時間（ゲーム内 約5時間）</div>
-      </div>
+        <script src="scenario.js"></script>
+        <script>
+            // ─────────────────────────────────────
+            // 定数
+            // ─────────────────────────────────────
+            const REVENUE_PER_SECOND = Math.round(
+                SCENARIO.meta.revenuePerYear / (365 * 24 * 3600),
+            ); // 31,710円/秒
 
-      <!-- 後処理リスト -->
-      <div class="mb-8">
-        <div class="text-sm text-gray-500 mb-4">障害が直った後に待ち受けていること：</div>
-        <div id="afterwork-list" class="space-y-3"></div>
-      </div>
+            const TIMEOUT_SECONDS = SCENARIO.meta.timeoutSeconds; // 600秒
 
-      <button onclick="resetGame()"
-        class="w-full border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 font-bold py-3 px-6 rounded-lg text-sm transition-colors">
-        最初からやり直す
-      </button>
-    </div>
-  </div>
+            // ─────────────────────────────────────
+            // State
+            // ─────────────────────────────────────
+            let startTime = null;
+            let timerInterval = null;
+            let timeoutShown = false;
+            let history = []; // 選択履歴
 
-  <script src="scenario.js"></script>
-  <script>
-    // ─────────────────────────────────────
-    // 定数
-    // ─────────────────────────────────────
-    const REVENUE_PER_SECOND = Math.round(
-      SCENARIO.meta.revenuePerYear / (365 * 24 * 3600)
-    ); // 31,710円/秒
+            // ─────────────────────────────────────
+            // ゲーム開始
+            // ─────────────────────────────────────
+            function startGame() {
+                history = [];
+                timeoutShown = false;
+                startTime = Date.now();
 
-    const TIMEOUT_SECONDS = SCENARIO.meta.timeoutSeconds; // 600秒
+                show("screen-game");
+                hide("screen-start");
 
-    // ─────────────────────────────────────
-    // State
-    // ─────────────────────────────────────
-    let startTime = null;
-    let timerInterval = null;
-    let timeoutShown = false;
-    let history = []; // 選択履歴
+                timerInterval = setInterval(tickTimer, 1000);
+                renderScene(SCENARIO.start);
+            }
 
-    // ─────────────────────────────────────
-    // ゲーム開始
-    // ─────────────────────────────────────
-    function startGame() {
-      history = [];
-      timeoutShown = false;
-      startTime = Date.now();
+            // ─────────────────────────────────────
+            // タイマー
+            // ─────────────────────────────────────
+            function tickTimer() {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                updateTimerUI(elapsed);
 
-      show('screen-game');
-      hide('screen-start');
+                if (!timeoutShown && elapsed >= TIMEOUT_SECONDS) {
+                    timeoutShown = true;
+                    showTimeoutBanner();
+                }
+            }
 
-      timerInterval = setInterval(tickTimer, 1000);
-      renderScene(SCENARIO.start);
-    }
+            function updateTimerUI(elapsed) {
+                const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+                const ss = String(elapsed % 60).padStart(2, "0");
+                document.getElementById("real-timer").textContent =
+                    `${mm}:${ss}`;
 
-    // ─────────────────────────────────────
-    // タイマー
-    // ─────────────────────────────────────
-    function tickTimer() {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      updateTimerUI(elapsed);
+                const pct = Math.min((elapsed / TIMEOUT_SECONDS) * 100, 100);
+                const bar = document.getElementById("timer-bar");
+                bar.style.width = pct + "%";
+                if (pct >= 100) {
+                    bar.classList.remove("bg-red-600");
+                    bar.classList.add("bg-yellow-500");
+                }
+            }
 
-      if (!timeoutShown && elapsed >= TIMEOUT_SECONDS) {
-        timeoutShown = true;
-        showTimeoutBanner();
-      }
-    }
+            function showTimeoutBanner() {
+                document
+                    .getElementById("timeout-banner")
+                    .classList.remove("hidden");
+            }
 
-    function updateTimerUI(elapsed) {
-      const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
-      const ss = String(elapsed % 60).padStart(2, '0');
-      document.getElementById('real-timer').textContent = `${mm}:${ss}`;
+            function dismissBanner() {
+                document
+                    .getElementById("timeout-banner")
+                    .classList.add("hidden");
+            }
 
-      const pct = Math.min((elapsed / TIMEOUT_SECONDS) * 100, 100);
-      const bar = document.getElementById('timer-bar');
-      bar.style.width = pct + '%';
-      if (pct >= 100) {
-        bar.classList.remove('bg-red-600');
-        bar.classList.add('bg-yellow-500');
-      }
-    }
+            // ─────────────────────────────────────
+            // シーン描画
+            // ─────────────────────────────────────
+            function renderScene(sceneId) {
+                const scene = SCENARIO.scenes[sceneId];
+                if (!scene) return;
 
-    function showTimeoutBanner() {
-      document.getElementById('timeout-banner').classList.remove('hidden');
-    }
+                // ゲーム内時刻を更新
+                document.getElementById("game-time-display").textContent =
+                    scene.gameTime;
 
-    function dismissBanner() {
-      document.getElementById('timeout-banner').classList.add('hidden');
-    }
+                if (scene.isEnding) {
+                    renderEnding(scene);
+                    return;
+                }
 
-    // ─────────────────────────────────────
-    // シーン描画
-    // ─────────────────────────────────────
-    function renderScene(sceneId) {
-      const scene = SCENARIO.scenes[sceneId];
-      if (!scene) return;
+                const container = document.getElementById("scene-container");
+                container.innerHTML = "";
 
-      // ゲーム内時刻を更新
-      document.getElementById('game-time-display').textContent = scene.gameTime;
-
-      if (scene.isEnding) {
-        renderEnding(scene);
-        return;
-      }
-
-      const container = document.getElementById('scene-container');
-      container.innerHTML = '';
-
-      const el = document.createElement('div');
-      el.className = 'fade-in';
-      el.innerHTML = `
+                const el = document.createElement("div");
+                el.className = "fade-in";
+                el.innerHTML = `
         <!-- フェーズ & 時刻 -->
         <div class="flex items-center justify-between mb-6">
           <span class="text-xs text-gray-600 font-mono">${scene.phase}</span>
@@ -268,54 +362,61 @@
         <!-- 選択肢 -->
         <div class="space-y-3" id="choices"></div>
       `;
-      container.appendChild(el);
+                container.appendChild(el);
 
-      const choicesEl = el.querySelector('#choices');
-      scene.choices.forEach((choice, i) => {
-        const btn = document.createElement('button');
-        btn.className = `choice-btn w-full text-left bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-gray-500 rounded-lg px-5 py-4 text-sm text-gray-200`;
-        btn.innerHTML = `
+                const choicesEl = el.querySelector("#choices");
+                scene.choices.forEach((choice, i) => {
+                    const btn = document.createElement("button");
+                    btn.className = `choice-btn w-full text-left bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-gray-500 rounded-lg px-5 py-4 text-sm text-gray-200`;
+                    btn.innerHTML = `
           <span class="text-gray-500 font-mono mr-2">${String.fromCharCode(65 + i)}.</span>
           ${choice.label}
         `;
-        btn.onclick = () => selectChoice(scene, choice, el);
-        choicesEl.appendChild(btn);
-      });
-    }
+                    btn.onclick = () => selectChoice(scene, choice, el);
+                    choicesEl.appendChild(btn);
+                });
+            }
 
-    // ─────────────────────────────────────
-    // 選択処理
-    // ─────────────────────────────────────
-    function selectChoice(scene, choice, sceneEl) {
-      history.push({ scene: scene.title, choice: choice.label, quality: choice.quality });
+            // ─────────────────────────────────────
+            // 選択処理
+            // ─────────────────────────────────────
+            function selectChoice(scene, choice, sceneEl) {
+                history.push({
+                    scene: scene.title,
+                    choice: choice.label,
+                    quality: choice.quality,
+                });
 
-      // ボタンを無効化
-      sceneEl.querySelectorAll('.choice-btn').forEach(btn => {
-        btn.disabled = true;
-        btn.classList.remove('hover:bg-gray-800', 'hover:border-gray-500');
-      });
+                // ボタンを無効化
+                sceneEl.querySelectorAll(".choice-btn").forEach((btn) => {
+                    btn.disabled = true;
+                    btn.classList.remove(
+                        "hover:bg-gray-800",
+                        "hover:border-gray-500",
+                    );
+                });
 
-      // 選択したボタンをハイライト
-      const btns = sceneEl.querySelectorAll('.choice-btn');
-      const idx = scene.choices.indexOf(choice);
-      btns[idx].classList.add('border-gray-400', 'bg-gray-800');
+                // 選択したボタンをハイライト
+                const btns = sceneEl.querySelectorAll(".choice-btn");
+                const idx = scene.choices.indexOf(choice);
+                btns[idx].classList.add("border-gray-400", "bg-gray-800");
 
-      // フィードバックを表示
-      const feedbackEl = document.createElement('div');
-      feedbackEl.className = 'mt-4 fade-in';
+                // フィードバックを表示
+                const feedbackEl = document.createElement("div");
+                feedbackEl.className = "mt-4 fade-in";
 
-      const colorMap = {
-        best: 'border-blue-700 bg-blue-950 text-blue-300',
-        okay: 'border-yellow-700 bg-yellow-950 text-yellow-300',
-        bad:  'border-red-800 bg-red-950 text-red-300',
-      };
-      const labelMap = {
-        best: '▲ マシな選択',
-        okay: '△ 一応の対応',
-        bad:  '▼ 悪手',
-      };
+                const colorMap = {
+                    best: "border-blue-700 bg-blue-950 text-blue-300",
+                    okay: "border-yellow-700 bg-yellow-950 text-yellow-300",
+                    bad: "border-red-800 bg-red-950 text-red-300",
+                };
+                const labelMap = {
+                    best: "▲ マシな選択",
+                    okay: "△ 一応の対応",
+                    bad: "▼ 悪手",
+                };
 
-      feedbackEl.innerHTML = `
+                feedbackEl.innerHTML = `
         <div class="border rounded-lg px-4 py-3 text-sm ${colorMap[choice.quality]}">
           <span class="font-bold mr-2">${labelMap[choice.quality]}</span>
           ${choice.note}
@@ -325,47 +426,52 @@
           <span class="font-bold text-red-400">${formatJPY(scene.gameMinutes * 60 * REVENUE_PER_SECOND)}</span>
         </div>
       `;
-      sceneEl.querySelector('#choices').after(feedbackEl);
+                sceneEl.querySelector("#choices").after(feedbackEl);
 
-      // 「次へ」ボタン
-      setTimeout(() => {
-        const nextEl = document.createElement('div');
-        nextEl.className = 'mt-6 fade-in';
-        nextEl.innerHTML = `
+                // 「次へ」ボタン
+                setTimeout(() => {
+                    const nextEl = document.createElement("div");
+                    nextEl.className = "mt-6 fade-in";
+                    nextEl.innerHTML = `
           <button onclick="renderScene('${choice.next}')"
             class="w-full bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-200 font-bold py-3 px-6 rounded-lg text-sm transition-colors">
             次へ →
           </button>
         `;
-        feedbackEl.after(nextEl);
-        nextEl.querySelector('button').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 600);
-    }
+                    feedbackEl.after(nextEl);
+                    nextEl.querySelector("button").scrollIntoView({
+                        behavior: "smooth",
+                        block: "nearest",
+                    });
+                }, 600);
+            }
 
-    // ─────────────────────────────────────
-    // エンディング
-    // ─────────────────────────────────────
-    function renderEnding(scene) {
-      clearInterval(timerInterval);
+            // ─────────────────────────────────────
+            // エンディング
+            // ─────────────────────────────────────
+            function renderEnding(scene) {
+                clearInterval(timerInterval);
 
-      // ゲーム画面を維持しつつエンディングを差し込む
-      hide('screen-game');
-      show('screen-ending');
+                // ゲーム画面を維持しつつエンディングを差し込む
+                hide("screen-game");
+                show("screen-ending");
 
-      document.getElementById('ending-message').textContent = scene.endingMessage;
+                document.getElementById("ending-message").textContent =
+                    scene.endingMessage;
 
-      // 損失額カウントアップ
-      animateLoss(SCENARIO.endingLoss);
+                // 損失額カウントアップ
+                animateLoss(SCENARIO.endingLoss);
 
-      // 後処理リスト（時間差で表示）
-      const listEl = document.getElementById('afterwork-list');
-      listEl.innerHTML = '';
-      scene.afterwork.forEach((item, i) => {
-        setTimeout(() => {
-          const el = document.createElement('div');
-          el.className = `afterwork-item bg-gray-900 border border-gray-800 rounded-lg px-4 py-3`;
-          el.style.animationDelay = `${i * 0.1}s`;
-          el.innerHTML = `
+                // 後処理リスト（時間差で表示）
+                const listEl = document.getElementById("afterwork-list");
+                listEl.innerHTML = "";
+                scene.afterwork.forEach((item, i) => {
+                    setTimeout(
+                        () => {
+                            const el = document.createElement("div");
+                            el.className = `afterwork-item bg-gray-900 border border-gray-800 rounded-lg px-4 py-3`;
+                            el.style.animationDelay = `${i * 0.1}s`;
+                            el.innerHTML = `
             <div class="flex items-start gap-3">
               <span class="text-gray-600 mt-0.5">□</span>
               <div>
@@ -374,61 +480,76 @@
               </div>
             </div>
           `;
-          listEl.appendChild(el);
-        }, 800 + i * 400);
-      });
-    }
+                            listEl.appendChild(el);
+                        },
+                        800 + i * 400,
+                    );
+                });
+            }
 
-    function animateLoss(target) {
-      const el = document.getElementById('loss-counter');
-      const duration = 2000; // 2秒かけてカウントアップ
-      const start = Date.now();
+            function animateLoss(target) {
+                const el = document.getElementById("loss-counter");
+                const duration = 2000; // 2秒かけてカウントアップ
+                const start = Date.now();
 
-      function step() {
-        const progress = Math.min((Date.now() - start) / duration, 1);
-        // easeOut
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const current = Math.round(target * eased);
-        el.textContent = formatJPY(current);
-        if (progress < 1) requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
-    }
+                function step() {
+                    const progress = Math.min(
+                        (Date.now() - start) / duration,
+                        1,
+                    );
+                    // easeOut
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    const current = Math.round(target * eased);
+                    el.textContent = formatJPY(current);
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            }
 
-    // 日本語桁区切り: 億・万単位で表示
-    function formatJPY(n) {
-      if (n >= 100_000_000) {
-        const oku = Math.floor(n / 100_000_000);
-        const man = Math.floor((n % 100_000_000) / 10_000);
-        return man > 0
-          ? `約${oku}億${man.toLocaleString('ja-JP')}万円`
-          : `約${oku}億円`;
-      } else if (n >= 10_000) {
-        const man = Math.floor(n / 10_000);
-        return `約${man.toLocaleString('ja-JP')}万円`;
-      }
-      return `¥${n.toLocaleString('ja-JP')}`;
-    }
+            // 日本語桁区切り: 億・万単位で表示
+            function formatJPY(n) {
+                if (n >= 100_000_000) {
+                    const oku = Math.floor(n / 100_000_000);
+                    const man = Math.floor((n % 100_000_000) / 10_000);
+                    return man > 0
+                        ? `約${oku}億${man.toLocaleString("ja-JP")}万円`
+                        : `約${oku}億円`;
+                } else if (n >= 10_000) {
+                    const man = Math.floor(n / 10_000);
+                    return `約${man.toLocaleString("ja-JP")}万円`;
+                }
+                return `¥${n.toLocaleString("ja-JP")}`;
+            }
 
-    // ─────────────────────────────────────
-    // リセット
-    // ─────────────────────────────────────
-    function resetGame() {
-      clearInterval(timerInterval);
-      hide('screen-ending');
-      hide('screen-game');
-      document.getElementById('timeout-banner').classList.add('hidden');
-      document.getElementById('timer-bar').style.width = '0%';
-      document.getElementById('timer-bar').classList.remove('bg-yellow-500');
-      document.getElementById('timer-bar').classList.add('bg-red-600');
-      show('screen-start');
-    }
+            // ─────────────────────────────────────
+            // リセット
+            // ─────────────────────────────────────
+            function resetGame() {
+                clearInterval(timerInterval);
+                hide("screen-ending");
+                hide("screen-game");
+                document
+                    .getElementById("timeout-banner")
+                    .classList.add("hidden");
+                document.getElementById("timer-bar").style.width = "0%";
+                document
+                    .getElementById("timer-bar")
+                    .classList.remove("bg-yellow-500");
+                document
+                    .getElementById("timer-bar")
+                    .classList.add("bg-red-600");
+                show("screen-start");
+            }
 
-    // ─────────────────────────────────────
-    // ユーティリティ
-    // ─────────────────────────────────────
-    function show(id) { document.getElementById(id).classList.remove('hidden'); }
-    function hide(id) { document.getElementById(id).classList.add('hidden'); }
-  </script>
-</body>
+            // ─────────────────────────────────────
+            // ユーティリティ
+            // ─────────────────────────────────────
+            function show(id) {
+                document.getElementById(id).classList.remove("hidden");
+            }
+            function hide(id) {
+                document.getElementById(id).classList.add("hidden");
+            }
+        </script>
+    </body>
 </html>
