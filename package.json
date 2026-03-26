@@ -1,5 +1,6 @@
 {
   "scripts": {
-    "build": "bun build.js"
+    "build": "bun build.js",
+    "test": "bun calc.test.js"
   }
 }
