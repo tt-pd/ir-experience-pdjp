@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>深夜の決済障害 | CS ロールプレイ</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            mono: ['"Noto Sans Mono"', "monospace"],
+                        },
+                    },
+                },
+            };
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            body {
+                font-family: "Noto Sans JP", sans-serif;
+            }
+
+            .choice-btn {
+                transition:
+                    background-color 0.15s,
+                    border-color 0.15s,
+                    transform 0.1s;
+            }
+            .choice-btn:hover {
+                transform: translateX(4px);
+            }
+            .choice-btn:disabled {
+                cursor: not-allowed;
+                opacity: 0.5;
+                transform: none;
+            }
+
+            .fade-in {
+                animation: fadeIn 0.4s ease-in;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .blink {
+                animation: blink 1s step-start infinite;
+            }
+            @keyframes blink {
+                50% {
+                    opacity: 0;
+                }
+            }
+
+            #loss-counter {
+                font-variant-numeric: tabular-nums;
+                letter-spacing: 0.05em;
+            }
+
+            .afterwork-item {
+                animation: fadeIn 0.5s ease-in both;
+            }
+
+            .progress-bar {
+                transition: width 1s linear;
+            }
+
+            #timeout-banner {
+                animation: slideDown 0.4s ease-out;
+            }
+            @keyframes slideDown {
+                from {
+                    transform: translateY(-100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+        </style>
+    </head>
+        <body class="bg-slate-50 text-slate-800 min-h-screen">
+        <!-- タイムアウトバナー -->
+        <div
+            id="timeout-banner"
+            class="hidden fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-yellow-950 px-4 py-3 text-center font-bold shadow-lg"
+        >
+            ⚠️ 10分が経過しました。実際のインシデントはまだ続いています。
+            <button
+                onclick="dismissBanner()"
+                class="ml-4 underline text-sm font-normal"
+            >
+                続ける
+            </button>
+        </div>
+
+        <!-- スタート画面 -->
+        <div
+            id="screen-start"
+            class="flex flex-col items-center justify-center min-h-screen px-6 fade-in"
+        >
+            <div class="max-w-xl w-full">
+                <div
+                    class="mb-2 text-xs text-red-500 tracking-widest uppercase font-mono"
+                >
+                    インシデント対応 CS ロールプレイ体験
+                </div>
+                <h1 class="text-3xl font-bold text-slate-900 mb-2">
+                    深夜の決済障害
+                </h1>
+                <p class="text-slate-500 mb-8 text-sm leading-relaxed">
+                    あなたは、年商1000億円のECサイトを運用する会社のCS担当者です。<br />
+                    今夜はオンコール当番です。
+                </p>
+
+                <div
+                    class="bg-slate-100 rounded-lg p-5 mb-8 text-sm text-slate-600 space-y-2"
+                >
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">想定プレイ時間</span
+                        ><span>10分以内</span>
+                    </div>
+                </div>
+
+                <button
+                    id="btn-start"
+                    onclick="startGame()"
+                    class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-6 rounded-lg text-lg transition-colors"
+                >
+                    開始する
+                </button>
+            </div>
+        </div>
+
+        <!-- ゲーム画面 -->
+        <div id="screen-game" class="hidden min-h-screen flex flex-col">
+            <!-- ヘッダー: タイマー -->
+            <div
+                class="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-6 sticky top-0 z-10 shadow-sm"
+            >
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 text-xs">実経過</span>
+                    <span
+                        id="real-timer"
+                        class="font-mono text-slate-900 text-lg font-bold"
+                        >00:00</span
+                    >
+                </div>
+                <div
+                    class="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden"
+                >
+                    <div
+                        id="timer-bar"
+                        class="progress-bar h-full bg-red-500 rounded-full"
+                        style="width: 0%"
+                    ></div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 text-xs">シミュレーション内</span>
+                    <span
+                        id="game-time-display"
+                        class="font-mono text-amber-600 text-sm font-bold"
+                        >23:15</span
+                    >
+                </div>
+            </div>
+
+            <!-- メインコンテンツ -->
+            <div
+                class="flex-1 flex flex-col items-center justify-start py-8 px-4"
+            >
+                <div id="scene-container" class="max-w-2xl w-full">
+                    <!-- シーンがここに描画される -->
+                </div>
+            </div>
+        </div>
+
+        <!-- エンディング画面 -->
+        <div
+            id="screen-ending"
+            class="hidden flex flex-col items-center justify-center min-h-screen px-6"
+        >
+            <div class="max-w-xl w-full fade-in">
+                <!-- 収束メッセージ -->
+                <div class="mb-8">
+                    <div
+                        class="text-xs text-slate-400 tracking-widest uppercase font-mono mb-2"
+                        id="ending-gametime"
+                    ></div>
+                    <h2 class="text-2xl font-bold text-slate-900 mb-4">復旧完了</h2>
+                    <p
+                        class="text-slate-500 text-sm leading-relaxed whitespace-pre-line"
+                        id="ending-message"
+                    ></p>
+                </div>
+
+                <!-- 損失額 -->
+                <div
+                    class="bg-white border border-red-200 rounded-lg p-6 mb-8 text-center shadow-sm"
+                >
+                    <div class="text-xs text-slate-400 mb-1">
+                        あなたの選択によって発生した損失
+                    </div>
+                    <div class="text-xs text-slate-400 mb-3">
+                        （<span id="ending-minutes">0</span>分 × 3,171円/秒）
+                    </div>
+                    <div
+                        id="loss-counter"
+                        class="text-4xl font-bold text-red-500 mb-3"
+                    >
+                        ¥0
+                    </div>
+                    <div class="text-xs text-slate-400 mt-1" id="repair-loss-note"></div>
+                    <div class="text-xs text-slate-400 mt-1">
+                        ※ 対応工数・機会費用・顧客離脱は含まれていません
+                    </div>
+                </div>
+
+                <!-- 後処理リスト -->
+                <div class="mb-8">
+                    <div class="text-sm text-slate-400 mb-4">
+                        障害が直った後に待ち受けていること：
+                    </div>
+                    <div id="afterwork-list" class="space-y-3"></div>
+                </div>
+
+                <!-- PagerDuty 価値提案 -->
+                <div class="mb-8">
+                    <div class="text-sm text-slate-400 mb-4">
+                        PagerDuty Operations Cloud があれば：
+                    </div>
+                    <div class="space-y-2">
+                        <div class="bg-slate-100 rounded-lg px-4 py-3 text-sm">
+                            <span class="font-bold text-slate-600 mr-2">1. 検知 / 2. トリアージ</span>
+                            <span class="text-slate-500">Slackに流れてきたアラートが、自動でインシデント化・担当者に直接通知されます</span>
+                        </div>
+                        <div class="bg-slate-100 rounded-lg px-4 py-3 text-sm">
+                            <span class="font-bold text-slate-600 mr-2">3. 動員</span>
+                            <span class="text-slate-500">古い当番表は不要。スケジュール管理と自動エスカレーションで、適切な担当者に確実に届きます</span>
+                        </div>
+                        <div class="bg-slate-100 rounded-lg px-4 py-3 text-sm">
+                            <span class="font-bold text-slate-600 mr-2">4. 協力 / 解決</span>
+                            <span class="text-slate-500">ステータスページの更新・経営層への状況共有・追加メンバーの招集が、ワンクリックで完了します</span>
+                        </div>
+                        <div class="bg-slate-100 rounded-lg px-4 py-3 text-sm">
+                            <span class="font-bold text-slate-600 mr-2">5. 学習 / 予防</span>
+                            <span class="text-slate-500">ポストモーテムの自動生成・MTTA/MTTR分析で、次の障害を未然に防ぎます</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button
+                    onclick="resetGame()"
+                    class="w-full border border-slate-300 hover:border-slate-400 text-slate-500 hover:text-slate-700 font-bold py-3 px-6 rounded-lg text-sm transition-colors"
+                >
+                    最初からやり直す
+                </button>
+            </div>
+        </div>
+
+        <script>
+const SCENARIO = {
+  meta: {
+    title: "深夜の決済障害",
+    subtitle: "あなたはCSチームのオンコール担当者です",
+    revenuePerYear: 100_000_000_000, // 1000億円
+    gameStartTime: "23:15", // 表示用
+    timeoutSeconds: 600,    // 10分でバナー表示
+  },
+
+  // ゲーム内時刻ベースの推定損失額（エンディング用）は削除
+  // → 損失額はプレイヤーの選択分（cumulativeLoss）で計算
+
+  start: "scene_01",
+
+  scenes: {
+    // ─────────────────────────────────────────
+    // Scene 1: アラート受信 | 23:15
+    // ─────────────────────────────────────────
+    scene_01: {
+      gameTime: "23:15",
+      phase: "Scene 1 / 5",
+      title: "アラート受信",
+      situation: `深夜23時15分。\n\nSlackの #alerts チャンネルに見慣れないメッセージが流れてきた。\n\n「【WARNING】決済サービス 決済エラー率 42% 上昇 / 過去5分間」\n\nチャンネルには誰も反応していない。あなたは今夜のCS当番だ。`,
+      choices: [
+        {
+          label: "オンコールエンジニアのDMに状況を送る",
+          quality: "best",
+          minutes: 25, // 連絡先を探す手間はあるが最短ルート
+          note: "正しい方向だが、連絡先を探すのに時間がかかる",
+          next: "scene_02_best",
+        },
+        {
+          label: "自分でダッシュボードを確認しに行く",
+          quality: "okay",
+          minutes: 35, // 権限がなくて詰まる分のロス
+          note: "確認しようとしたが、ログイン権限がない",
+          next: "scene_02_okay",
+        },
+        {
+          label: "上長にすぐSlackで報告する",
+          quality: "bad",
+          minutes: 40, // 上長とやりとりして結局エンジニアに連絡し直す
+          note: "上長「で、エンジニアには連絡したの？」",
+          next: "scene_02_bad",
+        },
+      ],
+    },
+
+    // ─────────────────────────────────────────
+    // Scene 2: エンジニアが捕まらない | 23:47
+    // ─────────────────────────────────────────
+    scene_02_best: {
+      gameTime: "23:47",
+      phase: "Scene 2 / 5",
+      title: "エンジニアが捕まらない",
+      situation: `23時47分。\n\nオンコール担当の田中さんにDMしたが、既読がつかない。\n後から分かったことだが、田中さんは別の障害対応で手が塞がっていた。\n\n決済エラーのアラートはまだ続いている。`,
+      choices: [
+        {
+          label: "オンコールローテーションの次の担当者を探して連絡する",
+          quality: "best",
+          minutes: 28, // 当番表が古いが次の人に辿り着ける
+          note: "当番表を探したが、最後に更新されたのは3ヶ月前だった",
+          next: "scene_03",
+        },
+        {
+          label: "田中さんに電話する",
+          quality: "okay",
+          minutes: 38, // 番号を探す手間がかかる
+          note: "社内名簿を探したが個人の携帯番号は載っていない",
+          next: "scene_03",
+        },
+        {
+          label: "#engineering 全体チャンネルで呼びかける",
+          quality: "bad",
+          minutes: 48, // 誰も反応せず時間が無駄になる
+          note: "深夜のため誰も反応せず、翌朝「なぜ全体に投げた」と言われた",
+          next: "scene_03",
+        },
+      ],
+    },
+
+    scene_02_okay: {
+      gameTime: "23:47",
+      phase: "Scene 2 / 5",
+      title: "エンジニアが捕まらない",
+      situation: `23時47分。\n\nダッシュボードにアクセスしようとしたが、あなたのアカウントには閲覧権限がなかった。\n権限申請のフローを調べている間に30分が過ぎた。\n\nオンコール担当の田中さんにも連絡したが、既読がつかない。`,
+      choices: [
+        {
+          label: "オンコールローテーションの次の担当者を探して連絡する",
+          quality: "best",
+          minutes: 28,
+          note: "当番表を探したが、最後に更新されたのは3ヶ月前だった",
+          next: "scene_03",
+        },
+        {
+          label: "田中さんに電話する",
+          quality: "okay",
+          minutes: 38,
+          note: "社内名簿を探したが個人の携帯番号は載っていない",
+          next: "scene_03",
+        },
+        {
+          label: "#engineering 全体チャンネルで呼びかける",
+          quality: "bad",
+          minutes: 48,
+          note: "深夜のため誰も反応せず、翌朝「なぜ全体に投げた」と言われた",
+          next: "scene_03",
+        },
+      ],
+    },
+
+    scene_02_bad: {
+      gameTime: "23:47",
+      phase: "Scene 2 / 5",
+      title: "エンジニアが捕まらない",
+      situation: `23時47分。\n\n上長から「エンジニアには連絡した？」と返ってきた。\nオンコール担当の田中さんにDMしたが、既読がつかない。\n別の障害対応で手が塞がっているらしい。\n\nここまでで30分以上が経過した。`,
+      choices: [
+        {
+          label: "オンコールローテーションの次の担当者を探して連絡する",
+          quality: "best",
+          minutes: 28,
+          note: "当番表を探したが、最後に更新されたのは3ヶ月前だった",
+          next: "scene_03",
+        },
+        {
+          label: "田中さんに電話する",
+          quality: "okay",
+          minutes: 38,
+          note: "社内名簿を探したが個人の携帯番号は載っていない",
+          next: "scene_03",
+        },
+        {
+          label: "#engineering 全体チャンネルで呼びかける",
+          quality: "bad",
+          minutes: 48,
+          note: "深夜のため誰も反応せず、翌朝「なぜ全体に投げた」と言われた",
+          next: "scene_03",
+        },
+      ],
+    },
+
+    // ─────────────────────────────────────────
+    // Scene 3: 顧客問い合わせの並走 | 00:23
+    // ─────────────────────────────────────────
+    scene_03: {
+      gameTime: "00:23",
+      phase: "Scene 3 / 5",
+      title: "顧客対応が押し寄せてくる",
+      situation: `日付が変わった00時23分。\n\nCS問い合わせフォームに「決済できないのですが」というメールが6件届いている。\nX（旧Twitter）でも「○○のサイト決済できない」という投稿が出始めた。\n\nエンジニア側の対応はまだ続いている。あなたは何をすべきか。`,
+      choices: [
+        {
+          label: "ステータスページに障害情報を掲載する",
+          quality: "best",
+          minutes: 75, // 権限者を探す手間はあるが一括対応できる
+          note: "ステータスページの更新権限が自分にはなかった。権限者を探すのにさらに時間がかかった",
+          next: "scene_04",
+        },
+        {
+          label: "影響を受けている顧客に個別で「確認中」と返信する",
+          quality: "okay",
+          minutes: 92, // 1件ずつ対応している間に問い合わせが増える
+          note: "返信している間にさらに問い合わせが増えて追いつかなくなった",
+          next: "scene_04",
+        },
+        {
+          label: "復旧してから一括で連絡する",
+          quality: "bad",
+          minutes: 110, // 放置している間にSNS炎上が拡大
+          note: "その間にXで「問い合わせても無視された」という投稿が拡散された",
+          next: "scene_04",
+        },
+      ],
+    },
+
+    // ─────────────────────────────────────────
+    // Scene 4: 状況悪化 | 01:55
+    // ─────────────────────────────────────────
+    scene_04: {
+      gameTime: "01:55",
+      phase: "Scene 4 / 5",
+      title: "状況が悪化した",
+      situation: `01時55分。\n\nエンジニアから「原因は特定したが、修正に時間がかかる」と連絡が来た。\n決済エラー率は75%に上昇。影響ユーザー数は数万人規模になっている。\n\n上長と経営層はまだ状況を正確に把握していない。`,
+      choices: [
+        {
+          label: "追加のエンジニアをアサインするよう依頼する",
+          quality: "best",
+          minutes: 90, // EMを叩き起こす手間はあるが人員が増える
+          note: "誰が今夜空いているか誰もわからず、結局エンジニアリングマネージャーを深夜に叩き起こすことになった",
+          next: "scene_05",
+        },
+        {
+          label: "経営層への報告を上長経由で上げる",
+          quality: "okay",
+          minutes: 105, // 報告フォーマットがなく往復が発生する
+          note: "報告フォーマットがなく、何をどこまで書けばいいか分からないまま送った。後から「情報が足りない」と言われた",
+          next: "scene_05",
+        },
+        {
+          label: "エンジニアを信頼してひたすら待つ",
+          quality: "bad",
+          minutes: 125, // 誰も動かないまま時間だけ過ぎる
+          note: "誰も状況を把握しないまま時間が過ぎ、経営層から「なぜ報告がなかったのか」と後で詰められた",
+          next: "scene_05",
+        },
+      ],
+    },
+
+    // ─────────────────────────────────────────
+    // Scene 5: 収束 → 後処理の重さ | 03:40
+    // ─────────────────────────────────────────
+    scene_05: {
+      gameTime: "03:40",
+      phase: "Scene 5 / 5",
+      title: "修復中",
+      situation: `03時40分。\n\nエンジニアから「原因は特定した。修復作業に入る」と連絡が来た。\n\nあなたにできることはもうない。\nあとはエンジニアを信じて待つだけだ。`,
+      isRepair: true,
+      repairMinutes: 60, // エンジニアの修復時間（固定・プレイヤーはコントロール不可）
+      afterwork: [
+        {
+          text: "影響を受けた顧客への個別連絡",
+          problem: "対象者リストがどこにもない",
+        },
+        {
+          text: "ステークホルダー・経営層への事後報告",
+          problem: "報告フォーマットが存在しない",
+        },
+        {
+          text: "再発防止策のドキュメント作成",
+          problem: "誰が書くか、どこに書くか、決まっていない",
+        },
+        {
+          text: "問い合わせ対応の収束確認",
+          problem: "まだ新規の問い合わせが来ている",
+        },
+        {
+          text: "次回オンコール担当者への申し送り",
+          problem: "申し送りの仕組みがない",
+        },
+      ],
+      endingMessage: `障害は直りました。\nでも、あなたの夜はまだ終わっていません。`,
+    },
+  },
+};
+
+</script>
+        <script>
+            // ─────────────────────────────────────
+            // 定数
+            // ─────────────────────────────────────
+            const REVENUE_PER_SECOND = Math.round(
+                SCENARIO.meta.revenuePerYear / (365 * 24 * 3600),
+            ); // 31,710円/秒
+
+            const TIMEOUT_SECONDS = SCENARIO.meta.timeoutSeconds; // 600秒
+
+            // ─────────────────────────────────────
+            // State
+            // ─────────────────────────────────────
+            let startTime = null;
+            let timerInterval = null;
+            let timeoutShown = false;
+            let history = []; // 選択履歴
+            let cumulativeLoss = 0; // 累積損失額（円）
+            let cumulativeMinutes = 0; // 累積経過分（ゲーム内）
+
+            // ─────────────────────────────────────
+            // ゲーム開始
+            // ─────────────────────────────────────
+            function startGame() {
+                history = [];
+                timeoutShown = false;
+                cumulativeLoss = 0;
+                cumulativeMinutes = 0;
+                startTime = Date.now();
+
+                show("screen-game");
+                hide("screen-start");
+
+                timerInterval = setInterval(tickTimer, 1000);
+                renderScene(SCENARIO.start);
+            }
+
+            // ─────────────────────────────────────
+            // タイマー
+            // ─────────────────────────────────────
+            function tickTimer() {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                updateTimerUI(elapsed);
+
+                if (!timeoutShown && elapsed >= TIMEOUT_SECONDS) {
+                    timeoutShown = true;
+                    showTimeoutBanner();
+                }
+            }
+
+            function updateTimerUI(elapsed) {
+                const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+                const ss = String(elapsed % 60).padStart(2, "0");
+                document.getElementById("real-timer").textContent =
+                    `${mm}:${ss}`;
+
+                const pct = Math.min((elapsed / TIMEOUT_SECONDS) * 100, 100);
+                const bar = document.getElementById("timer-bar");
+                bar.style.width = pct + "%";
+                if (pct >= 100) {
+                    bar.classList.remove("bg-red-500");
+                    bar.classList.add("bg-yellow-400");
+                }
+            }
+
+            function showTimeoutBanner() {
+                document
+                    .getElementById("timeout-banner")
+                    .classList.remove("hidden");
+            }
+
+            function dismissBanner() {
+                document
+                    .getElementById("timeout-banner")
+                    .classList.add("hidden");
+            }
+
+            // ─────────────────────────────────────
+            // シーン描画
+            // ─────────────────────────────────────
+            function renderScene(sceneId) {
+                const scene = SCENARIO.scenes[sceneId];
+                if (!scene) return;
+
+                // ゲーム内時刻を更新
+                document.getElementById("game-time-display").textContent =
+                    scene.gameTime;
+
+                if (scene.isRepair) {
+                    renderRepair(scene);
+                    return;
+                }
+
+                const container = document.getElementById("scene-container");
+                container.innerHTML = "";
+
+                const el = document.createElement("div");
+                el.className = "fade-in";
+                el.innerHTML = `
+        <!-- フェーズ & 時刻 -->
+        <div class="flex items-center justify-between mb-6">
+          <span class="text-xs text-slate-400 font-mono">${scene.phase}</span>
+          <span class="text-xs font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+            🕐 ${scene.gameTime}
+          </span>
+        </div>
+
+        <!-- アラートバッジ -->
+        <div class="flex items-center gap-2 mb-4">
+          <span class="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded blink">● INCIDENT</span>
+          <span class="text-sm text-red-600 font-bold">${scene.title}</span>
+        </div>
+
+        <!-- 状況テキスト -->
+        <div class="bg-white border border-slate-200 rounded-lg p-5 mb-6 shadow-sm">
+          <p class="text-slate-700 text-sm leading-relaxed whitespace-pre-line">${scene.situation}</p>
+        </div>
+
+        <!-- 選択肢 -->
+        <div class="space-y-3" id="choices"></div>
+      `;
+                container.appendChild(el);
+
+                const choicesEl = el.querySelector("#choices");
+                scene.choices.forEach((choice, i) => {
+                    const btn = document.createElement("button");
+                    btn.className = `choice-btn w-full text-left bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-400 rounded-lg px-5 py-4 text-sm text-slate-700 shadow-sm`;
+                    btn.innerHTML = `
+          <span class="text-slate-400 font-mono mr-2">${String.fromCharCode(65 + i)}.</span>
+          ${choice.label}
+        `;
+                    btn.onclick = () => selectChoice(scene, choice, el);
+                    choicesEl.appendChild(btn);
+                });
+            }
+
+            // ─────────────────────────────────────
+            // 選択処理
+            // ─────────────────────────────────────
+            function selectChoice(scene, choice, sceneEl) {
+                history.push({
+                    scene: scene.title,
+                    choice: choice.label,
+                    quality: choice.quality,
+                });
+
+                // ボタンを無効化
+                sceneEl.querySelectorAll(".choice-btn").forEach((btn) => {
+                    btn.disabled = true;
+                    btn.classList.remove(
+                        "hover:bg-slate-50",
+                        "hover:border-slate-400",
+                    );
+                });
+
+                // 選択したボタンをハイライト
+                const btns = sceneEl.querySelectorAll(".choice-btn");
+                const idx = scene.choices.indexOf(choice);
+                btns[idx].classList.add("border-slate-400", "bg-slate-100");
+
+                // フィードバックを表示
+                const feedbackEl = document.createElement("div");
+                feedbackEl.className = "mt-4 fade-in";
+
+                const colorMap = {
+                    best: "border-blue-300 bg-blue-50 text-blue-700",
+                    okay: "border-yellow-300 bg-yellow-50 text-yellow-700",
+                    bad: "border-red-300 bg-red-50 text-red-700",
+                };
+                const labelMap = {
+                    best: "▲ マシな選択",
+                    okay: "△ 一応の対応",
+                    bad: "▼ 悪手",
+                };
+
+                feedbackEl.innerHTML = `
+        <div class="border rounded-lg px-4 py-3 text-sm ${colorMap[choice.quality]}">
+          <span class="font-bold mr-2">${labelMap[choice.quality]}</span>
+          ${choice.note}
+        </div>
+        <div class="mt-2 bg-white border border-slate-200 rounded-lg px-4 py-3 text-sm flex items-center justify-between shadow-sm">
+          <span class="text-slate-500">障害発生から <span id="anim-minutes" class="text-slate-700 font-bold">${cumulativeMinutes}分</span> 経過</span>
+          <span class="font-bold text-red-500" id="anim-loss">− ${formatJPY(cumulativeLoss)}</span>
+        </div>
+      `;
+                sceneEl.querySelector("#choices").after(feedbackEl);
+
+                // 累積を加算してアニメーション
+                const prevLoss = cumulativeLoss;
+                const prevMinutes = cumulativeMinutes;
+                const addLoss = choice.minutes * 60 * REVENUE_PER_SECOND;
+                const addMinutes = choice.minutes;
+                cumulativeLoss += addLoss;
+                cumulativeMinutes += addMinutes;
+
+                animateCounter(
+                    document.getElementById("anim-loss"),
+                    prevLoss,
+                    cumulativeLoss,
+                    (v) => `− ${formatJPY(v)}`,
+                );
+                animateCounter(
+                    document.getElementById("anim-minutes"),
+                    prevMinutes,
+                    cumulativeMinutes,
+                    (v) => `${v}分`,
+                );
+
+                // 「次へ」ボタン
+                setTimeout(() => {
+                    const nextEl = document.createElement("div");
+                    nextEl.className = "mt-6 fade-in";
+                    nextEl.innerHTML = `
+          <button onclick="renderScene('${choice.next}')"
+            class="w-full bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold py-3 px-6 rounded-lg text-sm transition-colors">
+            次へ →
+          </button>
+        `;
+                    feedbackEl.after(nextEl);
+                    nextEl.querySelector("button").scrollIntoView({
+                        behavior: "smooth",
+                        block: "nearest",
+                    });
+                }, 600);
+            }
+
+            // ─────────────────────────────────────
+            // 修復中画面（固定60分）
+            // ─────────────────────────────────────
+            function renderRepair(scene) {
+                clearInterval(timerInterval);
+
+                const container = document.getElementById("scene-container");
+                container.innerHTML = "";
+
+                const REPAIR_MINUTES = scene.repairMinutes; // 60
+                const repairLoss = REPAIR_MINUTES * 60 * REVENUE_PER_SECOND;
+
+                const el = document.createElement("div");
+                el.className = "fade-in";
+                el.innerHTML = `
+        <div class="flex items-center justify-between mb-6">
+          <span class="text-xs text-slate-400 font-mono">${scene.phase}</span>
+          <span class="text-xs font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+            🕐 ${scene.gameTime}
+          </span>
+        </div>
+        <div class="flex items-center gap-2 mb-4">
+          <span class="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded">● 修復中</span>
+          <span class="text-sm text-amber-700 font-bold">${scene.title}</span>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-lg p-5 mb-6 shadow-sm">
+          <p class="text-slate-700 text-sm leading-relaxed whitespace-pre-line">${scene.situation}</p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-5 mb-6 text-center">
+          <div class="text-xs text-amber-600 mb-2">エンジニアが修復中です。この時間はコントロールできません。</div>
+          <div class="text-3xl font-bold font-mono text-amber-700 mb-1" id="repair-countdown">${REPAIR_MINUTES}:00</div>
+          <div class="text-xs text-amber-500">修復時間（固定）: ${REPAIR_MINUTES}分 / 損失: ${formatJPY(repairLoss)}</div>
+        </div>
+        <div id="repair-next" class="hidden mt-4 fade-in">
+          <button onclick="renderEnding()"
+            class="w-full bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold py-3 px-6 rounded-lg text-sm transition-colors">
+            結果を見る →
+          </button>
+        </div>
+      `;
+                container.appendChild(el);
+
+                // カウントダウン（実際に60秒待つのは無理なので1秒で演出）
+                const totalMs = 1000;
+                const startTs = Date.now();
+                const countEl = document.getElementById("repair-countdown");
+                function tickRepair() {
+                    const elapsed = Date.now() - startTs;
+                    const progress = Math.min(elapsed / totalMs, 1);
+                    const remaining = Math.round(REPAIR_MINUTES * (1 - progress));
+                    const mm = String(Math.floor(remaining)).padStart(2, "0");
+                    countEl.textContent = `${mm}:00`;
+                    if (progress < 1) {
+                        requestAnimationFrame(tickRepair);
+                    } else {
+                        countEl.textContent = "00:00";
+                        document.getElementById("repair-next").classList.remove("hidden");
+                        document.getElementById("repair-next").querySelector("button").scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    }
+                }
+                requestAnimationFrame(tickRepair);
+            }
+
+            // ─────────────────────────────────────
+            // エンディング
+            // ─────────────────────────────────────
+            function renderEnding() {
+                hide("screen-game");
+                show("screen-ending");
+
+                const scene = SCENARIO.scenes["scene_05"];
+                const REPAIR_MINUTES = scene.repairMinutes;
+                const repairLoss = REPAIR_MINUTES * 60 * REVENUE_PER_SECOND;
+
+                // ゲーム内終了時刻を計算（23:15 + 選択分 + 修復60分）
+                const startMinutes = 23 * 60 + 15;
+                const endMinutes = startMinutes + cumulativeMinutes + REPAIR_MINUTES;
+                const endHH = String(Math.floor(endMinutes / 60) % 24).padStart(2, "0");
+                const endMM = String(endMinutes % 60).padStart(2, "0");
+                const endTime = `${endHH}:${endMM}`;
+                document.getElementById("ending-gametime").textContent = endTime;
+
+                document.getElementById("ending-message").textContent =
+                    scene.endingMessage + `\n\n時刻は${endTime}になっていた。`;
+
+                // 損失額 = プレイヤーの選択分のみ
+                animateLoss(cumulativeLoss);
+
+                // 修復分の注釈を更新
+                document.getElementById("repair-loss-note").textContent =
+                    `※ 修復時間${REPAIR_MINUTES}分の損失（${formatJPY(repairLoss)}）は全ルート共通のため含まれていません`;
+
+                // 累積分数の表示
+                document.getElementById("ending-minutes").textContent = cumulativeMinutes;
+
+                // 後処理リスト（時間差で表示）
+                const listEl = document.getElementById("afterwork-list");
+                listEl.innerHTML = "";
+                scene.afterwork.forEach((item, i) => {
+                    setTimeout(
+                        () => {
+                            const el = document.createElement("div");
+                            el.className = `afterwork-item bg-white border border-slate-200 rounded-lg px-4 py-3 shadow-sm`;
+                            el.style.animationDelay = `${i * 0.1}s`;
+                            el.innerHTML = `
+            <div class="flex items-start gap-3">
+              <span class="text-slate-400 mt-0.5">□</span>
+              <div>
+                <div class="text-sm text-slate-700">${item.text}</div>
+                <div class="text-xs text-red-500 mt-1">→ ${item.problem}</div>
+              </div>
+            </div>
+          `;
+                            listEl.appendChild(el);
+                        },
+                        800 + i * 400,
+                    );
+                });
+            }
+
+            function animateLoss(target) {
+                const el = document.getElementById("loss-counter");
+                const duration = 2000;
+                const start = Date.now();
+                function step() {
+                    const progress = Math.min(
+                        (Date.now() - start) / duration,
+                        1,
+                    );
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    const current = Math.round(target * eased);
+                    el.textContent = formatJPY(current);
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            }
+
+            // from → to をアニメしてフォーマッタで表示する汎用カウンター
+            function animateCounter(el, from, to, formatter, duration = 800) {
+                const start = Date.now();
+                function step() {
+                    const progress = Math.min(
+                        (Date.now() - start) / duration,
+                        1,
+                    );
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    const current = Math.round(from + (to - from) * eased);
+                    el.textContent = formatter(current);
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+            }
+
+            // 日本語桁区切り: 億・万単位で表示
+            function formatJPY(n) {
+                if (n >= 100_000_000) {
+                    const oku = Math.floor(n / 100_000_000);
+                    const man = Math.floor((n % 100_000_000) / 10_000);
+                    return man > 0
+                        ? `約${oku}億${man}万円`
+                        : `約${oku}億円`;
+                } else if (n >= 10_000) {
+                    const man = Math.floor(n / 10_000);
+                    return `約${man}万円`;
+                }
+                return `¥${n.toLocaleString("ja-JP")}`;
+            }
+
+            // ─────────────────────────────────────
+            // リセット
+            // ─────────────────────────────────────
+            function resetGame() {
+                clearInterval(timerInterval);
+                hide("screen-ending");
+                hide("screen-game");
+                document
+                    .getElementById("timeout-banner")
+                    .classList.add("hidden");
+                document.getElementById("timer-bar").style.width = "0%";
+                document
+                    .getElementById("timer-bar")
+                    .classList.remove("bg-yellow-400");
+                document
+                    .getElementById("timer-bar")
+                    .classList.add("bg-red-500");
+                show("screen-start");
+            }
+
+            // ─────────────────────────────────────
+            // ユーティリティ
+            // ─────────────────────────────────────
+            function show(id) {
+                document.getElementById(id).classList.remove("hidden");
+            }
+            function hide(id) {
+                document.getElementById(id).classList.add("hidden");
+            }
+        </script>
+    </body>
+</html>
